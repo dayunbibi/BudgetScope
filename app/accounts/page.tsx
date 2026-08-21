@@ -21,6 +21,13 @@ async function createAccount(formData: FormData) {
   revalidatePath("/accounts");
 }
 
+async function deleteAccount(formData: FormData) {
+  "use server";
+  const id = formData.get("id") as string;
+  await getPool().query("DELETE FROM accounts WHERE id = $1", [id]);
+  revalidatePath("/accounts");
+}
+
 export default async function AccountsPage() {
   const { rows } = await getPool().query<Account>(`
     SELECT
@@ -42,9 +49,17 @@ export default async function AccountsPage() {
 
       <ul className="mb-6 space-y-1">
         {rows.map((a) => (
-          <li key={a.id} className="border rounded px-3 py-2 flex justify-between">
+          <li key={a.id} className="border rounded px-3 py-2 flex justify-between items-center">
             <span>{a.name} · {a.type}</span>
-            <span>{a.currency} {a.balance}</span>
+            <span className="flex items-center gap-2">
+              {a.currency} {a.balance}
+              <form action={deleteAccount}>
+                <input type="hidden" name="id" value={a.id} />
+                <button className="text-gray-400 hover:text-red-600" title="삭제">
+                  ×
+                </button>
+              </form>
+            </span>
           </li>
         ))}
         {rows.length === 0 && (

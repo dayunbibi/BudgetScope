@@ -21,6 +21,13 @@ async function createCategory(formData: FormData) {
   revalidatePath("/categories");
 }
 
+async function deleteCategory(formData: FormData) {
+  "use server";
+  const id = formData.get("id") as string;
+  await getPool().query("DELETE FROM categories WHERE id = $1", [id]);
+  revalidatePath("/categories");
+}
+
 export default async function CategoriesPage() {
   const pool = getPool();
   const { rows: categories } = await pool.query<Category>(`
@@ -36,9 +43,17 @@ export default async function CategoriesPage() {
 
       <ul className="mb-6 space-y-1">
         {categories.map((c) => (
-          <li key={c.id} className="border rounded px-3 py-2">
-            {c.parent_name ? `${c.parent_name} > ` : ""}
-            {c.name} · {c.kind}
+          <li key={c.id} className="border rounded px-3 py-2 flex justify-between items-center">
+            <span>
+              {c.parent_name ? `${c.parent_name} > ` : ""}
+              {c.name} · {c.kind}
+            </span>
+            <form action={deleteCategory}>
+              <input type="hidden" name="id" value={c.id} />
+              <button className="text-gray-400 hover:text-red-600" title="삭제">
+                ×
+              </button>
+            </form>
           </li>
         ))}
         {categories.length === 0 && (

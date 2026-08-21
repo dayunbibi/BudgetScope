@@ -71,6 +71,19 @@ async function createTransfer(formData: FormData) {
   revalidatePath("/accounts");
 }
 
+async function deleteTransaction(formData: FormData) {
+  "use server";
+  const id = formData.get("id") as string;
+  // 이체는 두 행이 한 쌍이라, 대상 행이나 그 짝(transfer_pair_id)이면 둘 다 지운다.
+  // 한쪽만 지우면 나머지 한쪽이 실제로 일어나지 않은 입금/출금처럼 남아 잔액이 어긋난다.
+  await getPool().query(
+    "DELETE FROM transactions WHERE id = $1 OR transfer_pair_id = $1",
+    [id]
+  );
+  revalidatePath("/transactions");
+  revalidatePath("/accounts");
+}
+
 export default async function TransactionsPage() {
   const pool = getPool();
   const [{ rows: accounts }, { rows: categories }, { rows: transactions }] =
@@ -97,16 +110,24 @@ export default async function TransactionsPage() {
 
       <ul className="mb-6 space-y-1">
         {transactions.map((t) => (
-          <li key={t.id} className="border rounded px-3 py-2 flex justify-between">
+          <li key={t.id} className="border rounded px-3 py-2 flex justify-between items-center">
             <span>
               {t.occurred_at} · {t.account_name}
               {t.type === "transfer" ? " · 이체" : ""}
               {t.category_name ? ` · ${t.category_name}` : ""}
               {t.description ? ` · ${t.description}` : ""}
             </span>
-            <span className={Number(t.signed_amount) < 0 ? "text-red-600" : "text-green-600"}>
-              {Number(t.signed_amount) >= 0 ? "+" : ""}
-              {t.signed_amount}
+            <span className="flex items-center gap-2">
+              <span className={Number(t.signed_amount) < 0 ? "text-red-600" : "text-green-600"}>
+                {Number(t.signed_amount) >= 0 ? "+" : ""}
+                {t.signed_amount}
+              </span>
+              <form action={deleteTransaction}>
+                <input type="hidden" name="id" value={t.id} />
+                <button className="text-gray-400 hover:text-red-600" title="삭제">
+                  ×
+                </button>
+              </form>
             </span>
           </li>
         ))}
