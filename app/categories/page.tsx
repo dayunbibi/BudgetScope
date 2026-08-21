@@ -1,5 +1,6 @@
 import { getPool } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { ui } from "@/components/ui";
 
 type Category = {
   id: string;
@@ -38,51 +39,72 @@ export default async function CategoriesPage() {
   `);
 
   return (
-    <main className="mx-auto max-w-xl p-8">
-      <h1 className="text-xl font-semibold mb-4">카테고리</h1>
+    <main className={ui.page}>
+      <h1 className={ui.pageTitle}>카테고리</h1>
 
-      <ul className="mb-6 space-y-1">
-        {categories.map((c) => (
-          <li key={c.id} className="border rounded px-3 py-2 flex justify-between items-center">
-            <span>
-              {c.parent_name ? `${c.parent_name} > ` : ""}
-              {c.name} · {c.kind}
-            </span>
-            <form action={deleteCategory}>
-              <input type="hidden" name="id" value={c.id} />
-              <button className="text-gray-400 hover:text-red-600" title="삭제">
-                ×
-              </button>
-            </form>
-          </li>
-        ))}
-        {categories.length === 0 && (
-          <li className="text-gray-500">아직 카테고리가 없어요.</li>
-        )}
-      </ul>
-
-      <form action={createCategory} className="flex gap-2">
-        <input
-          name="name"
-          placeholder="카테고리 이름"
-          required
-          className="border rounded px-2 py-1 flex-1"
-        />
-        <select name="kind" className="border rounded px-2 py-1">
-          <option value="expense">expense</option>
-          <option value="income">income</option>
-        </select>
-        <select name="parent_id" className="border rounded px-2 py-1">
-          <option value="">최상위</option>
+      <div className={`mt-4 ${ui.card}`}>
+        <ul className={ui.list}>
           {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
+            <li key={c.id} className={ui.row}>
+              <span className={ui.rowMain}>
+                {c.parent_name && (
+                  <span className={ui.rowSub}>{c.parent_name} › </span>
+                )}
+                {c.name}
+                <span className={ui.rowSub}> · {c.kind}</span>
+              </span>
+              <form action={deleteCategory}>
+                <input type="hidden" name="id" value={c.id} />
+                <button className={ui.deleteButton} title="삭제">
+                  ×
+                </button>
+              </form>
+            </li>
           ))}
-        </select>
-        <button className="border rounded px-3 py-1 bg-black text-white">
-          추가
-        </button>
+        </ul>
+        {categories.length === 0 && (
+          <p className={ui.emptyState}>카테고리가 없습니다. 아래에서 추가해보세요.</p>
+        )}
+      </div>
+
+      <form action={createCategory} className={ui.formCard}>
+        <div className={ui.formRow}>
+          <div>
+            <label className={ui.label} htmlFor="cat-name">
+              카테고리 이름
+            </label>
+            <input
+              id="cat-name"
+              name="name"
+              placeholder="예: 식비"
+              required
+              className={ui.input}
+            />
+          </div>
+          <div>
+            <label className={ui.label} htmlFor="cat-kind">
+              종류
+            </label>
+            <select id="cat-kind" name="kind" className={ui.select}>
+              <option value="expense">expense</option>
+              <option value="income">income</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className={ui.label} htmlFor="cat-parent">
+            상위 카테고리 (선택)
+          </label>
+          <select id="cat-parent" name="parent_id" className={ui.select}>
+            <option value="">최상위</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button className={ui.buttonPrimary}>카테고리 추가</button>
       </form>
     </main>
   );

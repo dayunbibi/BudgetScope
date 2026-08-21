@@ -1,5 +1,6 @@
 import { getPool } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { ui, Money } from "@/components/ui";
 
 type Account = {
   id: string;
@@ -9,6 +10,8 @@ type Account = {
   initial_balance: string;
   balance: string;
 };
+
+const ACCOUNT_TYPES = ["checking", "savings", "credit_card", "cash", "investment"];
 
 async function createAccount(formData: FormData) {
   "use server";
@@ -44,46 +47,62 @@ export default async function AccountsPage() {
   `);
 
   return (
-    <main className="mx-auto max-w-xl p-8">
-      <h1 className="text-xl font-semibold mb-4">계좌</h1>
+    <main className={ui.page}>
+      <h1 className={ui.pageTitle}>계좌</h1>
 
-      <ul className="mb-6 space-y-1">
-        {rows.map((a) => (
-          <li key={a.id} className="border rounded px-3 py-2 flex justify-between items-center">
-            <span>{a.name} · {a.type}</span>
-            <span className="flex items-center gap-2">
-              {a.currency} {a.balance}
-              <form action={deleteAccount}>
-                <input type="hidden" name="id" value={a.id} />
-                <button className="text-gray-400 hover:text-red-600" title="삭제">
-                  ×
-                </button>
-              </form>
-            </span>
-          </li>
-        ))}
+      <div className={`mt-4 ${ui.card}`}>
+        <ul className={ui.list}>
+          {rows.map((a) => (
+            <li key={a.id} className={ui.row}>
+              <span className={ui.rowMain}>
+                {a.name}
+                <span className={ui.rowSub}> · {a.type}</span>
+              </span>
+              <span className="flex items-center gap-3">
+                <Money amount={a.balance} currency={a.currency} />
+                <form action={deleteAccount}>
+                  <input type="hidden" name="id" value={a.id} />
+                  <button className={ui.deleteButton} title="삭제">
+                    ×
+                  </button>
+                </form>
+              </span>
+            </li>
+          ))}
+        </ul>
         {rows.length === 0 && (
-          <li className="text-gray-500">아직 계좌가 없어요.</li>
+          <p className={ui.emptyState}>계좌가 없습니다. 아래에서 추가해보세요.</p>
         )}
-      </ul>
+      </div>
 
-      <form action={createAccount} className="flex gap-2">
-        <input
-          name="name"
-          placeholder="계좌 이름"
-          required
-          className="border rounded px-2 py-1 flex-1"
-        />
-        <select name="type" className="border rounded px-2 py-1">
-          <option value="checking">checking</option>
-          <option value="savings">savings</option>
-          <option value="credit_card">credit_card</option>
-          <option value="cash">cash</option>
-          <option value="investment">investment</option>
-        </select>
-        <button className="border rounded px-3 py-1 bg-black text-white">
-          추가
-        </button>
+      <form action={createAccount} className={ui.formCard}>
+        <div className={ui.formRow}>
+          <div>
+            <label className={ui.label} htmlFor="acc-name">
+              계좌 이름
+            </label>
+            <input
+              id="acc-name"
+              name="name"
+              placeholder="예: 생활비 통장"
+              required
+              className={ui.input}
+            />
+          </div>
+          <div>
+            <label className={ui.label} htmlFor="acc-type">
+              계좌 종류
+            </label>
+            <select id="acc-type" name="type" className={ui.select}>
+              {ACCOUNT_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <button className={ui.buttonPrimary}>계좌 추가</button>
       </form>
     </main>
   );
