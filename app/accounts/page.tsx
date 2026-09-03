@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { getPool } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Money } from "@/components/money";
@@ -75,7 +76,7 @@ export default async function AccountsPage() {
                     <Money amount={a.balance} currency={a.currency} colored={false} />
                     <form action={deleteAccount}>
                       <input type="hidden" name="id" value={a.id} />
-                      <Button variant="ghost" size="icon-sm" title="삭제" aria-label="삭제">
+                      <Button variant="ghost" size="icon" title="삭제" aria-label="삭제">
                         ×
                       </Button>
                     </form>

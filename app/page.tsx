@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getPool } from "@/lib/db";
 import { Money } from "@/components/money";
@@ -67,39 +68,29 @@ export default async function DashboardPage() {
   const monthLabel = new Date().toLocaleDateString("ko-KR", { month: "long" });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <h1 className="font-heading text-2xl font-semibold tracking-tight">대시보드</h1>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">순자산</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Money amount={netWorth} colored={false} className="text-2xl" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Card size="sm">
+          <CardContent className="space-y-0.5">
+            <p className="text-sm text-muted-foreground">순자산</p>
+            <Money amount={netWorth} colored={false} className="text-xl sm:text-2xl" />
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {monthLabel} 지출
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <span className="text-2xl font-medium tabular-nums text-red-600 dark:text-red-400">
+        <Card size="sm">
+          <CardContent className="space-y-0.5">
+            <p className="text-sm text-muted-foreground">{monthLabel} 지출</p>
+            <span className="text-xl font-medium tabular-nums text-red-600 sm:text-2xl dark:text-red-400">
               <Money amount={-Number(totals.expense)} colored={false} />
             </span>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {monthLabel} 수지
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Money amount={net} className="text-2xl" />
-            <p className="mt-1 text-xs text-muted-foreground">
+        <Card size="sm">
+          <CardContent className="space-y-0.5">
+            <p className="text-sm text-muted-foreground">{monthLabel} 수지</p>
+            <Money amount={net} className="text-xl sm:text-2xl" />
+            <p className="text-xs text-muted-foreground">
               수입 <Money amount={Number(totals.income)} colored={false} />
             </p>
           </CardContent>

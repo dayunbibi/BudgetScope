@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { getPool } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Button } from "@/components/ui/button";
@@ -68,7 +69,7 @@ export default async function CategoriesPage() {
                     </Badge>
                     <form action={deleteCategory}>
                       <input type="hidden" name="id" value={c.id} />
-                      <Button variant="ghost" size="icon-sm" title="삭제" aria-label="삭제">
+                      <Button variant="ghost" size="icon" title="삭제" aria-label="삭제">
                         ×
                       </Button>
                     </form>

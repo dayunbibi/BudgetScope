@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { getPool } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "node:crypto";
@@ -6,14 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { NativeSelect } from "@/components/native-select";
 
 type Account = { id: string; name: string };
@@ -135,42 +128,34 @@ export default async function TransactionsPage() {
               거래가 없습니다. 아래에서 추가해보세요.
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-4">날짜</TableHead>
-                  <TableHead>계좌</TableHead>
-                  <TableHead>카테고리 / 메모</TableHead>
-                  <TableHead className="text-right">금액</TableHead>
-                  <TableHead className="pr-4" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="pl-4 text-muted-foreground">{t.occurred_at}</TableCell>
-                    <TableCell>{t.account_name}</TableCell>
-                    <TableCell className="max-w-[20rem] truncate">
+            <ul className="divide-y">
+              {transactions.map((t) => (
+                <li key={t.id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm">
                       {t.type === "transfer" ? "이체" : (t.category_name ?? "미분류")}
                       {t.description && (
                         <span className="text-muted-foreground"> · {t.description}</span>
                       )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Money amount={t.signed_amount} currency={t.account_currency} />
-                    </TableCell>
-                    <TableCell className="pr-4 text-right">
-                      <form action={deleteTransaction}>
-                        <input type="hidden" name="id" value={t.id} />
-                        <Button variant="ghost" size="icon-sm" title="삭제" aria-label="삭제">
-                          ×
-                        </Button>
-                      </form>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {t.occurred_at} · {t.account_name}
+                    </p>
+                  </div>
+                  <Money
+                    amount={t.signed_amount}
+                    currency={t.account_currency}
+                    className="shrink-0"
+                  />
+                  <form action={deleteTransaction} className="shrink-0">
+                    <input type="hidden" name="id" value={t.id} />
+                    <Button variant="ghost" size="icon" title="삭제" aria-label="삭제">
+                      ×
+                    </Button>
+                  </form>
+                </li>
+              ))}
+            </ul>
           )}
         </CardContent>
       </Card>
