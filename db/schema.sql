@@ -12,7 +12,7 @@ CREATE TABLE accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     type account_type NOT NULL,
-    currency CHAR(3) NOT NULL DEFAULT 'KRW',
+    currency CHAR(3) NOT NULL DEFAULT 'CAD', -- 앱은 CAD 기준. 원화 거래는 입력 시 CAD로 환산해서 저장
     initial_balance NUMERIC(14, 2) NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

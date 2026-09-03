@@ -1,7 +1,13 @@
+export const dynamic = "force-dynamic";
 import { getPool } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "node:crypto";
-import { ui, Money } from "@/components/ui";
+import { Money } from "@/components/money";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/native-select";
 
 type Account = { id: string; name: string };
 type Category = { id: string; name: string };
@@ -16,6 +22,8 @@ type Transaction = {
   category_name: string | null;
 };
 
+const today = () => new Date().toISOString().slice(0, 10);
+
 async function createTransaction(formData: FormData) {
   "use server";
   const accountId = formData.get("account_id") as string;
@@ -28,9 +36,11 @@ async function createTransaction(formData: FormData) {
   await getPool().query(
     `INSERT INTO transactions (account_id, category_id, type, amount, description, occurred_at)
      VALUES ($1, $2, $3, $4, $5, $6)`,
-    [accountId, categoryId || null, type, amount, description || null, occurredAt]
+    [accountId, categoryId || null, type, amount, description || null, occurredAt],
   );
   revalidatePath("/transactions");
+  revalidatePath("/accounts");
+  revalidatePath("/");
 }
 
 async function createTransfer(formData: FormData) {
@@ -54,12 +64,12 @@ async function createTransfer(formData: FormData) {
     await client.query(
       `INSERT INTO transactions (id, account_id, type, amount, description, occurred_at, transfer_pair_id)
        VALUES ($1, $2, 'transfer', $3, $4, $5, $6)`,
-      [outId, fromAccountId, `-${amount}`, description || null, occurredAt, inId]
+      [outId, fromAccountId, `-${amount}`, description || null, occurredAt, inId],
     );
     await client.query(
       `INSERT INTO transactions (id, account_id, type, amount, description, occurred_at, transfer_pair_id)
        VALUES ($1, $2, 'transfer', $3, $4, $5, $6)`,
-      [inId, toAccountId, amount, description || null, occurredAt, outId]
+      [inId, toAccountId, amount, description || null, occurredAt, outId],
     );
     await client.query("COMMIT");
   } catch (err) {
@@ -71,6 +81,7 @@ async function createTransfer(formData: FormData) {
 
   revalidatePath("/transactions");
   revalidatePath("/accounts");
+  revalidatePath("/");
 }
 
 async function deleteTransaction(formData: FormData) {
@@ -80,10 +91,11 @@ async function deleteTransaction(formData: FormData) {
   // 한쪽만 지우면 나머지 한쪽이 실제로 일어나지 않은 입금/출금처럼 남아 잔액이 어긋난다.
   await getPool().query(
     "DELETE FROM transactions WHERE id = $1 OR transfer_pair_id = $1",
-    [id]
+    [id],
   );
   revalidatePath("/transactions");
   revalidatePath("/accounts");
+  revalidatePath("/");
 }
 
 export default async function TransactionsPage() {
@@ -97,8 +109,6 @@ export default async function TransactionsPage() {
                to_char(t.occurred_at, 'YYYY-MM-DD') AS occurred_at,
                a.name AS account_name, a.currency AS account_currency,
                c.name AS category_name,
-               -- expense만 부호를 뒤집으면 됨: income은 원래 양수, transfer는 저장할 때부터
-               -- 이미 방향(부호)이 들어있음 (아래 createTransfer 참고)
                CASE WHEN t.type = 'expense' THEN -t.amount ELSE t.amount END AS signed_amount
         FROM transactions t
         JOIN accounts a ON a.id = t.account_id
@@ -108,198 +118,180 @@ export default async function TransactionsPage() {
     ]);
 
   return (
-    <main className={ui.page}>
-      <h1 className={ui.pageTitle}>거래</h1>
+    <div className="space-y-6">
+      <h1 className="font-heading text-2xl font-semibold tracking-tight">거래</h1>
 
-      <div className={`mt-4 ${ui.card}`}>
-        <ul className={ui.list}>
-          {transactions.map((t) => (
-            <li key={t.id} className={ui.row}>
-              <span className={ui.rowMain}>
-                {t.occurred_at} · {t.account_name}
-                {t.type === "transfer" && (
-                  <span className={ui.rowSub}> · 이체</span>
-                )}
-                {t.category_name && (
-                  <span className={ui.rowSub}> · {t.category_name}</span>
-                )}
-                {t.description && (
-                  <span className={ui.rowSub}> · {t.description}</span>
-                )}
-              </span>
-              <span className="flex items-center gap-3">
-                <Money amount={t.signed_amount} currency={t.account_currency} />
-                <form action={deleteTransaction}>
-                  <input type="hidden" name="id" value={t.id} />
-                  <button className={ui.deleteButton} title="삭제">
-                    ×
-                  </button>
-                </form>
-              </span>
-            </li>
-          ))}
-        </ul>
-        {transactions.length === 0 && (
-          <p className={ui.emptyState}>거래가 없습니다. 아래에서 추가해보세요.</p>
-        )}
+      <Card>
+        <CardContent className="px-0">
+          {transactions.length === 0 ? (
+            <p className="px-4 py-12 text-center text-sm text-muted-foreground">
+              거래가 없습니다. 아래에서 추가해보세요.
+            </p>
+          ) : (
+            <ul className="divide-y">
+              {transactions.map((t) => (
+                <li key={t.id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm">
+                      {t.type === "transfer" ? "이체" : (t.category_name ?? "미분류")}
+                      {t.description && (
+                        <span className="text-muted-foreground"> · {t.description}</span>
+                      )}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {t.occurred_at} · {t.account_name}
+                    </p>
+                  </div>
+                  <Money
+                    amount={t.signed_amount}
+                    currency={t.account_currency}
+                    className="shrink-0"
+                  />
+                  <form action={deleteTransaction} className="shrink-0">
+                    <input type="hidden" name="id" value={t.id} />
+                    <Button variant="ghost" size="icon" title="삭제" aria-label="삭제">
+                      ×
+                    </Button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>거래 추가</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form action={createTransaction} className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="tx-account">계좌</Label>
+                  <NativeSelect id="tx-account" name="account_id" required>
+                    {accounts.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="tx-type">종류</Label>
+                  <NativeSelect id="tx-type" name="type">
+                    <option value="expense">expense</option>
+                    <option value="income">income</option>
+                  </NativeSelect>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="tx-category">카테고리 (선택)</Label>
+                <NativeSelect id="tx-category" name="category_id">
+                  <option value="">카테고리 없음</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="tx-amount">금액 (CAD)</Label>
+                  <Input
+                    id="tx-amount"
+                    name="amount"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="0"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="tx-date">날짜</Label>
+                  <Input id="tx-date" name="occurred_at" type="date" required defaultValue={today()} />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="tx-desc">메모 (선택)</Label>
+                <Input id="tx-desc" name="description" placeholder="메모" />
+              </div>
+
+              <Button type="submit">거래 추가</Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>계좌 이체</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form action={createTransfer} className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="transfer-from">보내는 계좌</Label>
+                  <NativeSelect id="transfer-from" name="from_account_id" required>
+                    {accounts.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="transfer-to">받는 계좌</Label>
+                  <NativeSelect id="transfer-to" name="to_account_id" required>
+                    {accounts.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="transfer-amount">이체 금액 (CAD)</Label>
+                  <Input
+                    id="transfer-amount"
+                    name="transfer_amount"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="0"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="transfer-date">날짜</Label>
+                  <Input
+                    id="transfer-date"
+                    name="transfer_occurred_at"
+                    type="date"
+                    required
+                    defaultValue={today()}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="transfer-desc">메모 (선택)</Label>
+                <Input id="transfer-desc" name="transfer_description" placeholder="메모" />
+              </div>
+
+              <Button type="submit">이체</Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
-
-      <h2 className={ui.sectionTitle}>거래 추가</h2>
-      <form action={createTransaction} className={ui.formCard}>
-        <div className={ui.formRow}>
-          <div>
-            <label className={ui.label} htmlFor="tx-account">
-              계좌
-            </label>
-            <select id="tx-account" name="account_id" required className={ui.select}>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={ui.label} htmlFor="tx-type">
-              종류
-            </label>
-            <select id="tx-type" name="type" className={ui.select}>
-              <option value="expense">expense</option>
-              <option value="income">income</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label className={ui.label} htmlFor="tx-category">
-            카테고리 (선택)
-          </label>
-          <select id="tx-category" name="category_id" className={ui.select}>
-            <option value="">카테고리 없음</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className={ui.formRow}>
-          <div>
-            <label className={ui.label} htmlFor="tx-amount">
-              금액
-            </label>
-            <input
-              id="tx-amount"
-              name="amount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              placeholder="0"
-              required
-              className={ui.input}
-            />
-          </div>
-          <div>
-            <label className={ui.label} htmlFor="tx-date">
-              날짜
-            </label>
-            <input
-              id="tx-date"
-              name="occurred_at"
-              type="date"
-              required
-              defaultValue={new Date().toISOString().slice(0, 10)}
-              className={ui.input}
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className={ui.label} htmlFor="tx-desc">
-            메모 (선택)
-          </label>
-          <input id="tx-desc" name="description" placeholder="메모" className={ui.input} />
-        </div>
-
-        <button className={ui.buttonPrimary}>거래 추가</button>
-      </form>
-
-      <h2 className={ui.sectionTitle}>계좌 이체</h2>
-      <form action={createTransfer} className={ui.formCard}>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[10rem] flex-1">
-            <label className={ui.label} htmlFor="transfer-from">
-              보내는 계좌
-            </label>
-            <select id="transfer-from" name="from_account_id" required className={ui.select}>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <span className="pb-2 text-slate-400">→</span>
-          <div className="min-w-[10rem] flex-1">
-            <label className={ui.label} htmlFor="transfer-to">
-              받는 계좌
-            </label>
-            <select id="transfer-to" name="to_account_id" required className={ui.select}>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className={ui.formRow}>
-          <div>
-            <label className={ui.label} htmlFor="transfer-amount">
-              이체 금액
-            </label>
-            <input
-              id="transfer-amount"
-              name="transfer_amount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              placeholder="0"
-              required
-              className={ui.input}
-            />
-          </div>
-          <div>
-            <label className={ui.label} htmlFor="transfer-date">
-              날짜
-            </label>
-            <input
-              id="transfer-date"
-              name="transfer_occurred_at"
-              type="date"
-              required
-              defaultValue={new Date().toISOString().slice(0, 10)}
-              className={ui.input}
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className={ui.label} htmlFor="transfer-desc">
-            메모 (선택)
-          </label>
-          <input
-            id="transfer-desc"
-            name="transfer_description"
-            placeholder="메모"
-            className={ui.input}
-          />
-        </div>
-
-        <button className={ui.buttonPrimary}>이체</button>
-      </form>
-    </main>
+    </div>
   );
 }
