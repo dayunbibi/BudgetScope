@@ -149,7 +149,7 @@ export default async function TransactionsPage() {
                   />
                   <form action={deleteTransaction} className="shrink-0">
                     <input type="hidden" name="id" value={t.id} />
-                    <Button variant="ghost" size="icon" title="삭제" aria-label="삭제">
+                    <Button type="submit" variant="ghost" size="icon" title="삭제" aria-label="삭제">
                       ×
                     </Button>
                   </form>

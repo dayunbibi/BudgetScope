@@ -69,7 +69,7 @@ export default async function CategoriesPage() {
                     </Badge>
                     <form action={deleteCategory}>
                       <input type="hidden" name="id" value={c.id} />
-                      <Button variant="ghost" size="icon" title="삭제" aria-label="삭제">
+                      <Button type="submit" variant="ghost" size="icon" title="삭제" aria-label="삭제">
                         ×
                       </Button>
                     </form>

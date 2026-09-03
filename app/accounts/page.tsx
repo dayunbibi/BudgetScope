@@ -76,7 +76,7 @@ export default async function AccountsPage() {
                     <Money amount={a.balance} currency={a.currency} colored={false} />
                     <form action={deleteAccount}>
                       <input type="hidden" name="id" value={a.id} />
-                      <Button variant="ghost" size="icon" title="삭제" aria-label="삭제">
+                      <Button type="submit" variant="ghost" size="icon" title="삭제" aria-label="삭제">
                         ×
                       </Button>
                     </form>
