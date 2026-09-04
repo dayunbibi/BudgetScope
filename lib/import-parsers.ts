@@ -73,7 +73,9 @@ function parseTD(rows: unknown[][]): ParsedRow[] {
 
 // 토스뱅크 거래내역 엑셀: 상단에 계좌 정보 몇 줄 + 헤더 행 + 데이터.
 // 컬럼명이 버전마다 조금씩 달라서 헤더를 fuzzy 매칭한다.
-// TODO: 실제 토스뱅크 엑셀 파일로 헤더명(거래일시/출금/입금/적요) 확인 필요.
+// 실제 토스뱅크 거래내역 엑셀 확인한 포맷 (2026-09):
+// 거래 일시 | 적요 | 거래 유형 | 거래 기관 | 계좌번호 | 거래 금액(부호 있음, 출금 음수) | 거래 후 잔액 | 메모
+// 출금/입금 컬럼이 따로 있는 옛 포맷도 혹시 몰라 fallback으로 남겨둠.
 function parseToss(rows: unknown[][]): ParsedRow[] {
   const headerIdx = rows.findIndex((r) =>
     r?.some((c) => /일시|날짜|거래일/.test(String(c ?? ""))),
@@ -84,24 +86,38 @@ function parseToss(rows: unknown[][]): ParsedRow[] {
   const header = rows[headerIdx].map((c) => String(c ?? "").trim());
   const col = (re: RegExp) => header.findIndex((h) => re.test(h));
   const iDate = col(/일시|날짜|거래일/);
+  const iAmt = col(/거래\s*금액|^금액$/);
   const iOut = col(/출금/);
   const iIn = col(/입금/);
   const iDesc = col(/적요|내용|보내|받는|가맹|메모|구분|거래처/);
-  if (iDate === -1 || (iOut === -1 && iIn === -1)) {
-    throw new Error("토스 엑셀 컬럼(거래일시/출금/입금)을 못 찾음");
+  if (iDate === -1 || (iAmt === -1 && iOut === -1 && iIn === -1)) {
+    throw new Error("토스 엑셀 컬럼(거래 금액 등)을 못 찾음");
   }
   const out: ParsedRow[] = [];
   for (const r of rows.slice(headerIdx + 1)) {
     if (!r || !r[iDate]) continue;
-    const outKrw = iOut === -1 ? 0 : num(r[iOut]);
-    const inKrw = iIn === -1 ? 0 : num(r[iIn]);
-    if (outKrw === 0 && inKrw === 0) continue;
-    const krw = outKrw > 0 ? outKrw : inKrw;
+
+    let krw: number;
+    let isExpense: boolean;
+    if (iAmt !== -1) {
+      const s = String(r[iAmt] ?? "").trim();
+      if (!s) continue;
+      krw = num(s);
+      if (krw === 0) continue;
+      isExpense = /^-/.test(s.replace(/[,\s₩]/g, ""));
+    } else {
+      const outKrw = iOut === -1 ? 0 : num(r[iOut]);
+      const inKrw = iIn === -1 ? 0 : num(r[iIn]);
+      if (outKrw === 0 && inKrw === 0) continue;
+      krw = outKrw > 0 ? outKrw : inKrw;
+      isExpense = outKrw > 0;
+    }
+
     out.push({
       occurredAt: toISODate(r[iDate]),
       description: iDesc === -1 ? "" : String(r[iDesc] ?? "").trim(),
       amount: Math.round(krw * KRW_TO_CAD * 100) / 100,
-      type: outKrw > 0 ? "expense" : "income",
+      type: isExpense ? "expense" : "income",
     });
   }
   return out;
