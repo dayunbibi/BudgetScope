@@ -18,6 +18,7 @@ const navLinks = [
   { href: "/transactions", label: "거래" },
   { href: "/accounts", label: "계좌" },
   { href: "/categories", label: "카테고리" },
+  { href: "/import", label: "가져오기" },
 ];
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
