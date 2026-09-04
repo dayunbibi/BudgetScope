@@ -4,9 +4,11 @@ import { getPool } from "@/lib/db";
 import { ImportForm } from "./import-form";
 
 export default async function ImportPage() {
-  const { rows: accounts } = await getPool().query<{ id: string; name: string }>(
-    "SELECT id, name FROM accounts ORDER BY name",
-  );
+  const { rows: accounts } = await getPool().query<{
+    id: string;
+    name: string;
+    currency: string;
+  }>("SELECT id, name, currency FROM accounts ORDER BY name");
 
   return (
     <div className="space-y-6">

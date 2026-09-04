@@ -14,7 +14,7 @@ import {
   type CommitState,
 } from "./actions";
 
-type Account = { id: string; name: string };
+type Account = { id: string; name: string; currency: string };
 
 export function ImportForm({ accounts }: { accounts: Account[] }) {
   const [preview, previewAction, previewing] = useActionState<PreviewState, FormData>(
@@ -58,10 +58,13 @@ export function ImportForm({ accounts }: { accounts: Account[] }) {
                 <NativeSelect id="imp-account" name="account_id" required>
                   {accounts.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.name}
+                      {a.name} ({a.currency})
                     </option>
                   ))}
                 </NativeSelect>
+                <p className="text-xs text-muted-foreground">
+                  가져온 금액은 CAD 기준이라, CAD 계좌를 고르는 걸 추천해요.
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="imp-source">파일 형식</Label>
