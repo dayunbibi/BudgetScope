@@ -10,20 +10,20 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   title: "BudgetScope",
-  description: "가계부",
+  description: "Personal budgeting app",
 };
 
 const navLinks = [
-  { href: "/", label: "대시보드" },
-  { href: "/transactions", label: "거래" },
-  { href: "/accounts", label: "계좌" },
-  { href: "/categories", label: "카테고리" },
+  { href: "/", label: "Dashboard" },
+  { href: "/transactions", label: "Transactions" },
+  { href: "/accounts", label: "Accounts" },
+  { href: "/categories", label: "Categories" },
 ];
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="ko"
+      lang="en"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >

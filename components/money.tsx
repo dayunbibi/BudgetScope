@@ -1,7 +1,6 @@
 import { cn } from "@/lib/utils";
 
-// 앱 전체를 CAD 기준으로 표시. 계좌가 다른 통화를 쓰면 currency prop으로 넘김.
-// 원화 거래는 입력/가져오기 시점에 CAD로 환산해서 저장한다 (CSV import 단계에서 처리).
+// Everything is shown in CAD by default. Pass currency if an account uses something else.
 export function Money({
   amount,
   currency = "CAD",

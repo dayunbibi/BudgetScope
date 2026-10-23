@@ -45,13 +45,13 @@ export default async function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-2xl font-semibold tracking-tight">카테고리</h1>
+      <h1 className="font-heading text-2xl font-semibold tracking-tight">Categories</h1>
 
       <Card>
         <CardContent className="px-0">
           {categories.length === 0 ? (
             <p className="px-4 py-12 text-center text-sm text-muted-foreground">
-              카테고리가 없습니다. 아래에서 추가해보세요.
+              No categories yet. Add one below.
             </p>
           ) : (
             <ul className="divide-y">
@@ -69,7 +69,7 @@ export default async function CategoriesPage() {
                     </Badge>
                     <form action={deleteCategory}>
                       <input type="hidden" name="id" value={c.id} />
-                      <Button type="submit" variant="ghost" size="icon" title="삭제" aria-label="삭제">
+                      <Button type="submit" variant="ghost" size="icon" title="Delete" aria-label="Delete">
                         ×
                       </Button>
                     </form>
@@ -83,17 +83,17 @@ export default async function CategoriesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>새 카테고리 추가</CardTitle>
+          <CardTitle>New category</CardTitle>
         </CardHeader>
         <CardContent>
           <form action={createCategory} className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="cat-name">카테고리 이름</Label>
-                <Input id="cat-name" name="name" placeholder="예: 식비" required />
+                <Label htmlFor="cat-name">Name</Label>
+                <Input id="cat-name" name="name" placeholder="e.g. Groceries" required />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="cat-kind">종류</Label>
+                <Label htmlFor="cat-kind">Type</Label>
                 <NativeSelect id="cat-kind" name="kind">
                   <option value="expense">expense</option>
                   <option value="income">income</option>
@@ -101,9 +101,9 @@ export default async function CategoriesPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="cat-parent">상위 카테고리 (선택)</Label>
+              <Label htmlFor="cat-parent">Parent category (optional)</Label>
               <NativeSelect id="cat-parent" name="parent_id">
-                <option value="">최상위</option>
+                <option value="">None (top level)</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -111,7 +111,7 @@ export default async function CategoriesPage() {
                 ))}
               </NativeSelect>
             </div>
-            <Button type="submit">카테고리 추가</Button>
+            <Button type="submit">Add category</Button>
           </form>
         </CardContent>
       </Card>

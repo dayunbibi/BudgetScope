@@ -39,7 +39,7 @@ export default async function DashboardPage() {
         WHERE occurred_at >= date_trunc('month', CURRENT_DATE)
       `),
       pool.query<CatRow>(`
-        SELECT COALESCE(c.name, '미분류') AS name, SUM(t.amount) AS total
+        SELECT COALESCE(c.name, 'Uncategorized') AS name, SUM(t.amount) AS total
         FROM transactions t
         LEFT JOIN categories c ON c.id = t.category_id
         WHERE t.type = 'expense'
@@ -65,22 +65,22 @@ export default async function DashboardPage() {
   const netWorth = accounts.reduce((sum, a) => sum + Number(a.balance), 0);
   const net = Number(totals.income) - Number(totals.expense);
   const catMax = Math.max(1, ...byCategory.map((c) => Number(c.total)));
-  const monthLabel = new Date().toLocaleDateString("ko-KR", { month: "long" });
+  const monthLabel = new Date().toLocaleDateString("en-CA", { month: "long" });
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-2xl font-semibold tracking-tight">대시보드</h1>
+      <h1 className="font-heading text-2xl font-semibold tracking-tight">Dashboard</h1>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Card size="sm">
           <CardContent className="space-y-0.5">
-            <p className="text-sm text-muted-foreground">순자산</p>
+            <p className="text-sm text-muted-foreground">Net worth</p>
             <Money amount={netWorth} colored={false} className="text-xl sm:text-2xl" />
           </CardContent>
         </Card>
         <Card size="sm">
           <CardContent className="space-y-0.5">
-            <p className="text-sm text-muted-foreground">{monthLabel} 지출</p>
+            <p className="text-sm text-muted-foreground">{monthLabel} spending</p>
             <span className="text-xl font-medium tabular-nums text-red-600 sm:text-2xl dark:text-red-400">
               <Money amount={-Number(totals.expense)} colored={false} />
             </span>
@@ -88,10 +88,10 @@ export default async function DashboardPage() {
         </Card>
         <Card size="sm">
           <CardContent className="space-y-0.5">
-            <p className="text-sm text-muted-foreground">{monthLabel} 수지</p>
+            <p className="text-sm text-muted-foreground">{monthLabel} net</p>
             <Money amount={net} className="text-xl sm:text-2xl" />
             <p className="text-xs text-muted-foreground">
-              수입 <Money amount={Number(totals.income)} colored={false} />
+              Income <Money amount={Number(totals.income)} colored={false} />
             </p>
           </CardContent>
         </Card>
@@ -100,12 +100,12 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>{monthLabel} 카테고리별 지출</CardTitle>
+            <CardTitle>{monthLabel} spending by category</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {byCategory.length === 0 && (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                이번 달 지출 내역이 없습니다.
+                No spending this month yet.
               </p>
             )}
             {byCategory.map((c) => (
@@ -127,12 +127,12 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>계좌</CardTitle>
+            <CardTitle>Accounts</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {accounts.length === 0 && (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                <Link href="/accounts" className="underline">계좌를 추가</Link>해보세요.
+                <Link href="/accounts" className="underline">Add an account</Link> to get started.
               </p>
             )}
             {accounts.map((a) => (
@@ -150,12 +150,12 @@ export default async function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>최근 거래</CardTitle>
+          <CardTitle>Recent transactions</CardTitle>
         </CardHeader>
         <CardContent>
           {recent.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              <Link href="/transactions" className="underline">거래를 추가</Link>해보세요.
+              <Link href="/transactions" className="underline">Add a transaction</Link> to see it here.
             </p>
           ) : (
             <ul className="divide-y">
@@ -163,7 +163,7 @@ export default async function DashboardPage() {
                 <li key={t.id} className="flex items-center justify-between gap-4 py-2.5 text-sm">
                   <span className="min-w-0 truncate">
                     <span className="text-muted-foreground">{t.occurred_at}</span>{" "}
-                    {t.category_name ?? (t.type === "transfer" ? "이체" : "미분류")}
+                    {t.category_name ?? (t.type === "transfer" ? "Transfer" : "Uncategorized")}
                     {t.description && (
                       <span className="text-muted-foreground"> · {t.description}</span>
                     )}
@@ -178,7 +178,7 @@ export default async function DashboardPage() {
             href="/transactions"
             className="mt-3 inline-block text-sm text-muted-foreground underline"
           >
-            전체 거래 보기 →
+            View all transactions →
           </Link>
         </CardContent>
       </Card>
