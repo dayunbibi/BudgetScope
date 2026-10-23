@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
-// shadcn Select는 Base UI 기반 client 컴포넌트라 Server Action <form> 안에서 name 전송이 번거롭다.
-// 네이티브 <select>를 shadcn Input과 같은 톤으로 스타일링해서 그대로 form에 넣는다.
+// shadcn's Select is a client component, which makes it awkward inside a Server Action <form>.
+// A plain <select> styled like the shadcn Input just works with FormData.
 export function NativeSelect({
   className,
   ...props

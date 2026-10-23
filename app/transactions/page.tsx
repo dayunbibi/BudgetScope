@@ -51,10 +51,10 @@ async function createTransfer(formData: FormData) {
   const description = formData.get("transfer_description") as string;
   const occurredAt = formData.get("transfer_occurred_at") as string;
 
-  // 두 행이 서로를 transfer_pair_id로 가리켜야 하는데, UUID는 클라이언트(이 서버 코드)에서
-  // 미리 만들 수 있으니 INSERT 두 번을 하면서 서로의 id를 처음부터 채워 넣을 수 있다.
-  // (transfer_pair_id FK가 DEFERRABLE INITIALLY DEFERRED라 커밋 시점에만 검증되므로,
-  //  아직 존재하지 않는 상대방 id를 먼저 참조해도 트랜잭션 안에서는 통과한다.)
+  // Both rows need to point at each other through transfer_pair_id.
+  // I generate the UUIDs here first so each INSERT can already use the other row's id.
+  // The FK is DEFERRABLE INITIALLY DEFERRED, so it's only checked on COMMIT
+  // and referencing a row that doesn't exist yet is fine inside the transaction.
   const outId = randomUUID();
   const inId = randomUUID();
 
@@ -87,8 +87,8 @@ async function createTransfer(formData: FormData) {
 async function deleteTransaction(formData: FormData) {
   "use server";
   const id = formData.get("id") as string;
-  // 이체는 두 행이 한 쌍이라, 대상 행이나 그 짝(transfer_pair_id)이면 둘 다 지운다.
-  // 한쪽만 지우면 나머지 한쪽이 실제로 일어나지 않은 입금/출금처럼 남아 잔액이 어긋난다.
+  // A transfer is a pair of rows, so delete the row and its pair together.
+  // If only one side got deleted, the other would look like a real deposit/withdrawal and break the balance.
   await getPool().query(
     "DELETE FROM transactions WHERE id = $1 OR transfer_pair_id = $1",
     [id],
@@ -119,13 +119,13 @@ export default async function TransactionsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-2xl font-semibold tracking-tight">거래</h1>
+      <h1 className="font-heading text-2xl font-semibold tracking-tight">Transactions</h1>
 
       <Card>
         <CardContent className="px-0">
           {transactions.length === 0 ? (
             <p className="px-4 py-12 text-center text-sm text-muted-foreground">
-              거래가 없습니다. 아래에서 추가해보세요.
+              No transactions yet. Add one below.
             </p>
           ) : (
             <ul className="divide-y">
@@ -133,7 +133,7 @@ export default async function TransactionsPage() {
                 <li key={t.id} className="flex items-center gap-3 px-4 py-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm">
-                      {t.type === "transfer" ? "이체" : (t.category_name ?? "미분류")}
+                      {t.type === "transfer" ? "Transfer" : (t.category_name ?? "Uncategorized")}
                       {t.description && (
                         <span className="text-muted-foreground"> · {t.description}</span>
                       )}
@@ -149,7 +149,7 @@ export default async function TransactionsPage() {
                   />
                   <form action={deleteTransaction} className="shrink-0">
                     <input type="hidden" name="id" value={t.id} />
-                    <Button type="submit" variant="ghost" size="icon" title="삭제" aria-label="삭제">
+                    <Button type="submit" variant="ghost" size="icon" title="Delete" aria-label="Delete">
                       ×
                     </Button>
                   </form>
@@ -163,13 +163,13 @@ export default async function TransactionsPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>거래 추가</CardTitle>
+            <CardTitle>Add transaction</CardTitle>
           </CardHeader>
           <CardContent>
             <form action={createTransaction} className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="tx-account">계좌</Label>
+                  <Label htmlFor="tx-account">Account</Label>
                   <NativeSelect id="tx-account" name="account_id" required>
                     {accounts.map((a) => (
                       <option key={a.id} value={a.id}>
@@ -179,7 +179,7 @@ export default async function TransactionsPage() {
                   </NativeSelect>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="tx-type">종류</Label>
+                  <Label htmlFor="tx-type">Type</Label>
                   <NativeSelect id="tx-type" name="type">
                     <option value="expense">expense</option>
                     <option value="income">income</option>
@@ -188,9 +188,9 @@ export default async function TransactionsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="tx-category">카테고리 (선택)</Label>
+                <Label htmlFor="tx-category">Category (optional)</Label>
                 <NativeSelect id="tx-category" name="category_id">
-                  <option value="">카테고리 없음</option>
+                  <option value="">No category</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -201,7 +201,7 @@ export default async function TransactionsPage() {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="tx-amount">금액 (CAD)</Label>
+                  <Label htmlFor="tx-amount">Amount (CAD)</Label>
                   <Input
                     id="tx-amount"
                     name="amount"
@@ -213,30 +213,30 @@ export default async function TransactionsPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="tx-date">날짜</Label>
+                  <Label htmlFor="tx-date">Date</Label>
                   <Input id="tx-date" name="occurred_at" type="date" required defaultValue={today()} />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="tx-desc">메모 (선택)</Label>
-                <Input id="tx-desc" name="description" placeholder="메모" />
+                <Label htmlFor="tx-desc">Note (optional)</Label>
+                <Input id="tx-desc" name="description" placeholder="e.g. Groceries at No Frills" />
               </div>
 
-              <Button type="submit">거래 추가</Button>
+              <Button type="submit">Add transaction</Button>
             </form>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>계좌 이체</CardTitle>
+            <CardTitle>Transfer between accounts</CardTitle>
           </CardHeader>
           <CardContent>
             <form action={createTransfer} className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="transfer-from">보내는 계좌</Label>
+                  <Label htmlFor="transfer-from">From</Label>
                   <NativeSelect id="transfer-from" name="from_account_id" required>
                     {accounts.map((a) => (
                       <option key={a.id} value={a.id}>
@@ -246,7 +246,7 @@ export default async function TransactionsPage() {
                   </NativeSelect>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="transfer-to">받는 계좌</Label>
+                  <Label htmlFor="transfer-to">To</Label>
                   <NativeSelect id="transfer-to" name="to_account_id" required>
                     {accounts.map((a) => (
                       <option key={a.id} value={a.id}>
@@ -259,7 +259,7 @@ export default async function TransactionsPage() {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="transfer-amount">이체 금액 (CAD)</Label>
+                  <Label htmlFor="transfer-amount">Amount (CAD)</Label>
                   <Input
                     id="transfer-amount"
                     name="transfer_amount"
@@ -271,7 +271,7 @@ export default async function TransactionsPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="transfer-date">날짜</Label>
+                  <Label htmlFor="transfer-date">Date</Label>
                   <Input
                     id="transfer-date"
                     name="transfer_occurred_at"
@@ -283,11 +283,11 @@ export default async function TransactionsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="transfer-desc">메모 (선택)</Label>
-                <Input id="transfer-desc" name="transfer_description" placeholder="메모" />
+                <Label htmlFor="transfer-desc">Note (optional)</Label>
+                <Input id="transfer-desc" name="transfer_description" placeholder="e.g. Move to savings" />
               </div>
 
-              <Button type="submit">이체</Button>
+              <Button type="submit">Transfer</Button>
             </form>
           </CardContent>
         </Card>
